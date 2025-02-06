@@ -5,6 +5,7 @@ require_relative 'obfuscator/constants'
 require_relative 'obfuscator/internal/rng'
 require_relative 'obfuscator/naturalizer'
 require_relative 'obfuscator/multilang'
+require_relative 'obfuscator/date_obfuscator'
 
 module Obfuscator
   class Error < StandardError; end

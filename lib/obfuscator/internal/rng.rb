@@ -22,6 +22,7 @@ module Obfuscator
     #   def some_method
     #     random_sample(some_array)      # For array sampling
     #     random_probability             # For random float between 0 and 1
+    #     random_range(some_range)       # For range sampling
     #   end
     module RNG
       private
@@ -36,6 +37,10 @@ module Obfuscator
 
       def random_probability
         @rng.rand
+      end
+
+      def random_range(range)
+        @rng.rand(range)
       end
     end
   end
