@@ -2,6 +2,7 @@
 
 require_relative 'obfuscator/version'
 require_relative 'obfuscator/constants'
+require_relative 'obfuscator/internal/rng'
 require_relative 'obfuscator/naturalizer'
 require_relative 'obfuscator/multilang'
 
