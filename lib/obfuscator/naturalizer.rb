@@ -4,8 +4,30 @@ require_relative 'constants'
 require_relative 'internal/rng'
 
 module Obfuscator
-  # A class responsible for naturalizing words, making them more readable and
-  # natural-looking while preserving their structure.
+  # A class responsible for naturalizing words by applying linguistic rules to make them
+  # more readable and natural-looking while preserving their structure.
+  #
+  # The naturalizer applies several rules to improve readability:
+  # 1. No soft/hard signs (ь/ъ) after Latin letters
+  # 2. No щ after w/th combinations
+  # 3. No й after consonants
+  # 4. No triple consonants (inserts appropriate vowel)
+  # 5. Handles impossible letter combinations
+  # 6. No double vowels
+  # 7. Special handling for ё, ю, я after consonants
+  # 8. Applies appropriate language-specific endings for longer words
+  #
+  # @example Basic usage
+  #   naturalizer = Naturalizer.new
+  #   naturalizer.naturalize("Thщит") # => "Thкит"
+  #
+  # @example With seed for reproducible results
+  #   naturalizer = Naturalizer.new(12345)
+  #   naturalizer.naturalize("Thщит") # => Same result for same seed
+  #
+  # @param seed [Integer, nil] Optional seed for reproducible results
+  #
+  # @see Multilang For the main obfuscation class that uses this naturalizer
   class Naturalizer
     include Constants
     include Internal::RNG

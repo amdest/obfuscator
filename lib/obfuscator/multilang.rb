@@ -7,8 +7,32 @@ require_relative 'naturalizer'
 module Obfuscator
   # A class responsible for obfuscating text in Russian and English languages.
   #
-  # This class provides various modes for obfuscating text, including direct,
-  # swapped, and mixed modes. It also supports naturalization of the obfuscated text.
+  # This class provides various modes for obfuscating text while preserving the original
+  # text structure, whitespace, punctuation, and capitalization. The obfuscation can be
+  # performed in several modes and optionally naturalized to produce more readable output.
+  #
+  # Available modes:
+  # - MODE_DIRECT (default): Preserves language, replacing words with same-language random words
+  # - MODE_ENG_TO_ENG: Only obfuscates English words, leaves Russian untouched
+  # - MODE_RUS_TO_RUS: Only obfuscates Russian words, leaves English untouched
+  # - MODE_SWAPPED: Swaps languages (English→Russian and Russian→English)
+  # - MODE_MIXED: Generates words containing both English and Russian characters
+  #
+  # @example Basic usage
+  #   obfuscator = Multilang.new
+  #   obfuscator.obfuscate("Hello world!") # => "Kites mefal!"
+  #
+  # @example Using swapped mode with naturalization
+  #   obfuscator = Multilang.new(mode: :swapped, naturalize: true)
+  #   obfuscator.obfuscate("Hello мир!") # => "Привет world!"
+  #
+  # @param mode [Symbol] The obfuscation mode to use (default: MODE_DIRECT)
+  # @param seed [Integer, nil] Optional seed for reproducible results
+  # @param naturalize [Boolean] Whether to naturalize the output (default: false)
+  #
+  # @raise [InputError] If input doesn't respond to :to_s
+  # @raise [EncodingError] If input has invalid encoding
+  # @raise [Error] If obfuscation fails for any other reason
   class Multilang
     include Constants
     include Internal::RNG
