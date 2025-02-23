@@ -1,19 +1,47 @@
 # frozen_string_literal: true
 
 require_relative 'constants'
+require_relative 'internal/rng'
 
 module Obfuscator
-  # A class responsible for naturalizing words, making them more readable and
-  # natural-looking while preserving their structure.
+  # A class responsible for naturalizing words by applying linguistic rules to make them
+  # more readable and natural-looking while preserving their structure.
+  #
+  # The naturalizer applies several rules to improve readability:
+  # 1. No soft/hard signs (ь/ъ) after Latin letters
+  # 2. No щ after w/th combinations
+  # 3. No й after consonants
+  # 4. No triple consonants (inserts appropriate vowel)
+  # 5. Handles impossible letter combinations
+  # 6. No double vowels
+  # 7. Special handling for ё, ю, я after consonants
+  # 8. Applies appropriate language-specific endings for longer words
+  #
+  # @example Basic usage
+  #   naturalizer = Naturalizer.new
+  #   naturalizer.naturalize("Thщит") # => "Thкит"
+  #
+  # @example With seed for reproducible results
+  #   naturalizer = Naturalizer.new(12345)
+  #   naturalizer.naturalize("Thщит") # => Same result for same seed
+  #
+  # @param seed [Integer, nil] Optional seed for reproducible results
+  #
+  # @see Multilang For the main obfuscation class that uses this naturalizer
   class Naturalizer
     include Constants
+    include Internal::RNG
 
-    def initialize(rng = Random.new)
-      @rng = rng
+    def initialize(seed = nil)
+      @seed = seed # Store the seed
+      setup_rng(seed)
     end
 
     # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength,Metrics/PerceivedComplexity
     def naturalize(word)
+      # Reset RNG state before each naturalization if seed was provided
+      setup_rng(@seed) if @seed
+
       return word unless word.respond_to?(:to_s)
       return word if word.length < 2
 
@@ -32,16 +60,16 @@ module Obfuscator
           # Rule 1: No ь/ъ after Latin letters
           soft_hard_signs = %w[ь ъ]
           if latin?(char) && soft_hard_signs.include?(next_char)
-            chars[i + 1] = RUSSIAN_CONSONANTS.reject { |c| soft_hard_signs.include?(c) }.sample(random: @rng)
+            chars[i + 1] = random_sample(RUSSIAN_CONSONANTS.reject { |c| soft_hard_signs.include?(c) })
           end
 
           # Rule 2: No щ after w/th
           if (char == 'w' || (i.positive? && chars[i - 1] == 't' && char == 'h')) && next_char == 'щ'
-            chars[i + 1] = (RUSSIAN_CONSONANTS - ['щ']).sample(random: @rng)
+            chars[i + 1] = random_sample(RUSSIAN_CONSONANTS - ['щ'])
           end
 
           # Rule 3: No й after consonants
-          chars[i + 1] = (RUSSIAN_CONSONANTS - ['й']).sample(random: @rng) if consonant?(char) && next_char == 'й'
+          chars[i + 1] = random_sample(RUSSIAN_CONSONANTS - ['й']) if consonant?(char) && next_char == 'й'
 
           # Rule 4: No triple consonants
           if i < chars.length - 2 &&
@@ -49,9 +77,9 @@ module Obfuscator
              consonant?(next_char) &&
              consonant?(chars[i + 2])
             chars[i + 1] = if cyrillic?(next_char)
-                             RUSSIAN_VOWELS.sample(random: @rng)
+                             random_sample(RUSSIAN_VOWELS)
                            else
-                             ENGLISH_VOWELS.sample(random: @rng)
+                             random_sample(ENGLISH_VOWELS)
                            end
           end
 
@@ -59,18 +87,18 @@ module Obfuscator
           current_pair = char + next_char
           if IMPOSSIBLE_COMBINATIONS.any? { |combo| current_pair.include?(combo) }
             chars[i + 1] = if cyrillic?(next_char)
-                             RUSSIAN_CONSONANTS.sample(random: @rng)
+                             random_sample(RUSSIAN_CONSONANTS)
                            else
-                             ENGLISH_CONSONANTS.sample(random: @rng)
+                             random_sample(ENGLISH_CONSONANTS)
                            end
           end
 
           # Rule 6: No double vowels
           if vowel?(char) && vowel?(next_char)
             chars[i + 1] = if cyrillic?(next_char)
-                             RUSSIAN_CONSONANTS.sample(random: @rng)
+                             random_sample(RUSSIAN_CONSONANTS)
                            else
-                             ENGLISH_CONSONANTS.sample(random: @rng)
+                             random_sample(ENGLISH_CONSONANTS)
                            end
           end
 
@@ -78,7 +106,7 @@ module Obfuscator
           # This rule is a special case of Rule 5
           soft_vowels = %w[ё ю я]
           if consonant?(char) && soft_vowels.include?(next_char)
-            chars[i + 1] = (RUSSIAN_VOWELS - soft_vowels).sample(random: @rng)
+            chars[i + 1] = random_sample(RUSSIAN_VOWELS - soft_vowels)
           end
 
           result << char
@@ -137,14 +165,14 @@ module Obfuscator
       return word if word.length < 4
 
       base = word[0...-2]
-      base + RUSSIAN_ENDINGS.sample(random: @rng)
+      base + random_sample(RUSSIAN_ENDINGS)
     end
 
     def apply_english_ending(word)
       return word if word.length < 4
 
       base = word[0...-2]
-      base + ENGLISH_ENDINGS.sample(random: @rng)
+      base + random_sample(ENGLISH_ENDINGS)
     end
   end
 end

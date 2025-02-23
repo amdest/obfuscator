@@ -1,15 +1,41 @@
 # frozen_string_literal: true
 
 require_relative 'constants'
+require_relative 'internal/rng'
 require_relative 'naturalizer'
 
 module Obfuscator
   # A class responsible for obfuscating text in Russian and English languages.
   #
-  # This class provides various modes for obfuscating text, including direct,
-  # swapped, and mixed modes. It also supports naturalization of the obfuscated text.
+  # This class provides various modes for obfuscating text while preserving the original
+  # text structure, whitespace, punctuation, and capitalization. The obfuscation can be
+  # performed in several modes and optionally naturalized to produce more readable output.
+  #
+  # Available modes:
+  # - MODE_DIRECT (default): Preserves language, replacing words with same-language random words
+  # - MODE_ENG_TO_ENG: Only obfuscates English words, leaves Russian untouched
+  # - MODE_RUS_TO_RUS: Only obfuscates Russian words, leaves English untouched
+  # - MODE_SWAPPED: Swaps languages (English→Russian and Russian→English)
+  # - MODE_MIXED: Generates words containing both English and Russian characters
+  #
+  # @example Basic usage
+  #   obfuscator = Multilang.new
+  #   obfuscator.obfuscate("Hello world!") # => "Kites mefal!"
+  #
+  # @example Using swapped mode with naturalization
+  #   obfuscator = Multilang.new(mode: :swapped, naturalize: true)
+  #   obfuscator.obfuscate("Hello мир!") # => "Привет world!"
+  #
+  # @param mode [Symbol] The obfuscation mode to use (default: MODE_DIRECT)
+  # @param seed [Integer, nil] Optional seed for reproducible results
+  # @param naturalize [Boolean] Whether to naturalize the output (default: false)
+  #
+  # @raise [InputError] If input doesn't respond to :to_s
+  # @raise [EncodingError] If input has invalid encoding
+  # @raise [Error] If obfuscation fails for any other reason
   class Multilang
     include Constants
+    include Internal::RNG
 
     MODE_DIRECT = :direct # 1:1 obfuscation, the default
     MODE_ENG_TO_ENG = :eng_to_eng # eng/rus → eng/rus untouched
@@ -19,21 +45,19 @@ module Obfuscator
 
     def initialize(mode: MODE_DIRECT, seed: nil, naturalize: false)
       @mode = mode
-      @seed = seed
-      @naturalizer = if naturalize
-                       naturalizer_rng = @seed.nil? ? Random.new : Random.new(@seed)
-                       Naturalizer.new(naturalizer_rng)
-                     end
+      @seed = seed # Store the seed
+      setup_rng(seed)
+      @naturalizer = Naturalizer.new(seed) if naturalize
     end
 
     def obfuscate(input)
+      # Reset RNG state before each obfuscation if seed was provided
+      setup_rng(@seed) if @seed
+
       raise InputError, 'Input must respond to :to_s' unless input.respond_to?(:to_s)
       return input if input.nil? || input.is_a?(Numeric)
 
       text = input.to_s
-
-      # Reset RNG state for each call if seed was provided, create new if not
-      @rng = @seed.nil? ? Random.new : Random.new(@seed)
 
       # Ensure UTF-8 encoding
       begin
@@ -45,7 +69,6 @@ module Obfuscator
       # Split preserving all whitespace and punctuation
       begin
         tokens = text.split(/(\s+|[[:punct:]])/)
-
         tokens.map do |token|
           if token.match?(/\s+|[[:punct:]]/)
             token # Preserve whitespace and punctuation
@@ -96,9 +119,9 @@ module Obfuscator
     end
 
     def detect_language(word)
-      first_char = word.downcase[0]
-      return :russian if first_char.match?(/[а-яё]/)
-      return :english if first_char.match?(/[a-z]/)
+      first_char = word[0]
+      return :russian if first_char.match?(/[а-яёА-ЯЁ]/)
+      return :english if first_char.match?(/[a-zA-Z]/)
 
       :unknown
     end
@@ -137,11 +160,11 @@ module Obfuscator
       return '' if length.zero?
 
       result = ''
-      is_vowel = @rng.rand < vowel_start_prob
+      is_vowel = random_probability < vowel_start_prob
 
       while result.length < length
         chars = is_vowel ? vowels : consonants
-        result += chars.sample(random: @rng)
+        result += random_sample(chars)
         is_vowel = !is_vowel
       end
 
@@ -151,26 +174,26 @@ module Obfuscator
     def generate_mixed_word(length)
       return '' if length.zero?
 
-      is_vowel = @rng.rand < 0.25
+      is_vowel = random_probability < 0.25
 
       result = ''
       while result.length < length
         # 50/50 chance of Russian or English
-        use_russian = @rng.rand < 0.5
+        use_russian = random_probability < 0.5
 
         # 25/75 chance of vowel for Russian/English
         # is_vowel = @rng.rand < (use_russian ? 0.25 : 0.4)
 
         char = if is_vowel
                  if use_russian
-                   RUSSIAN_VOWELS.sample(random: @rng)
+                   random_sample(RUSSIAN_VOWELS)
                  else
-                   ENGLISH_VOWELS.sample(random: @rng)
+                   random_sample(ENGLISH_VOWELS)
                  end
                elsif use_russian
-                 RUSSIAN_CONSONANTS.sample(random: @rng)
+                 random_sample(RUSSIAN_CONSONANTS)
                else
-                 ENGLISH_CONSONANTS.sample(random: @rng)
+                 random_sample(ENGLISH_CONSONANTS)
                end
 
         result += char
@@ -184,6 +207,14 @@ module Obfuscator
       word.chars.map.with_index do |c, i|
         pattern[i] ? c.upcase : c.downcase
       end.join
+    end
+
+    def random_sample(array)
+      array.sample(random: @rng)
+    end
+
+    def random_probability
+      @rng.rand
     end
   end
 end

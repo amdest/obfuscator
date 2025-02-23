@@ -14,6 +14,10 @@ require:
   - rubocop-minitest
   - rubocop-performance
 
+Naming/FileName:
+  Exclude:
+    - 'lib/obfuscator-rb.rb'
+
 Style/StringLiterals:
   Enabled: true
   EnforcedStyle: single_quotes
@@ -29,7 +33,7 @@ Layout/HashAlignment:
   EnforcedColonStyle: table
 
 Metrics/ClassLength:
-  Max: 140
+  Max: 250
   Exclude:
     - "test/*"
 
@@ -40,7 +44,7 @@ Metrics/MethodLength:
   Max: 60
 
 Metrics/AbcSize:
-  Max: 40
+  Max: 45
   Exclude:
     - "test/*"
 
@@ -49,3 +53,15 @@ Metrics/PerceivedComplexity:
 
 Metrics/CyclomaticComplexity:
   Max: 30
+
+Minitest/MultipleAssertions:
+  Max: 6
+
+Performance/ChainArrayAllocation:
+  Enabled: true
+
+Style/MultilineBlockChain:
+  Enabled: true
+
+Performance/IoReadlines:
+  Enabled: true

@@ -3,7 +3,7 @@
 source 'https://rubygems.org'
 
 # Specify your gem's dependencies in obfuscator.gemspec
-gemspec name: 'obfuscator'
+gemspec name: 'obfuscator-rb'
 
 gem 'rake', '~> 13.0'
 

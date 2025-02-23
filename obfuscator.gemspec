@@ -3,20 +3,24 @@
 require_relative 'lib/obfuscator/version'
 
 Gem::Specification.new do |spec|
-  spec.name = 'obfuscator'
+  spec.name = 'obfuscator-rb'
   spec.version = Obfuscator::VERSION
   spec.authors = ['Aleksandr Dryzhuk']
   spec.email = ['dev@ad-it.pro']
 
-  spec.summary = 'Text obfuscator that preserves structure while working with both English and Russian languages'
+  spec.summary = 'A robust data obfuscator for numbers, dates, and text with format preservation'
   spec.description = <<~DESC
-    A Ruby gem for text obfuscation that preserves text structure while replacing content
-    with meaningless but natural-looking words. Supports both English and Russian languages,
-    with various obfuscation modes and optional text naturalization.
+    A Ruby library for data obfuscation that:
+    - Preserves original data format and structure as much as possible
+    - Supports numbers (including IP-like sequences), dates, and text
+    - Maintains text structure while replacing content with meaningless but natural-looking words in English and Russian
+    - Maintains data type consistency and decimal precision
+    - Offers seeded randomization for reproducible results
+    - Handles various number formats (leading zeros, separators)
+    - Provides configurable options (unsigned mode, format preservation)
 
-    Гем для обфускации текста, сохраняющий его структуру и естественный вид, но заменяющий при этом содержимое
-    бессмысленными словами. Поддерживает английский и русский языки, различные режимы обфускации и опциональную
-    натурализацию текста.
+    Note: Individual obfuscator instances are not thread-safe.
+    For concurrent operations, create separate instances per thread.
   DESC
   spec.homepage = 'https://hub.mos.ru/ad/obfuscator'
   spec.license = 'MIT'
@@ -31,7 +35,7 @@ Gem::Specification.new do |spec|
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
   gemspec = File.basename(__FILE__)
   spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
-    ls.readlines("\x0", chomp: true).reject do |f|
+    ls.each_line("\x0", chomp: true).reject do |f|
       (f == gemspec) ||
         f.start_with?(*%w[bin/ test/ spec/ features/ .git appveyor Gemfile])
     end

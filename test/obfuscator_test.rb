@@ -171,6 +171,17 @@ class ObfuscatorMultilangTest < Minitest::Test
     assert_equal obf1.obfuscate(text), obf2.obfuscate(text)
   end
 
+  def test_produces_reproducible_output_with_seed_sequentially
+    text = 'Hello World'
+    obfuscator = Obfuscator::Multilang.new(seed: 12_345)
+
+    result1 = obfuscator.obfuscate(text)
+    result2 = obfuscator.obfuscate(text)
+
+    assert_equal result1, result2,
+                 'Sequential calls with same seed should produce identical results'
+  end
+
   def test_handles_empty_string
     assert_equal '', @obfuscator.obfuscate('')
   end
